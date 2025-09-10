@@ -9,13 +9,22 @@ template = """
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>仮掲示板</title>
+    <title>ごつ盛りチャット</title>
+    <style>
+    .m{
+        border: 3px solid #00E5A8;
+        width: 800px;
+         word-wrap: break-word;
+         width: 800px;
+         white-space: pre-line;
+    }
+    </style>
 </head>
 <body>
-    <h1>仮掲示板</h1>
+    <h1>ごつ盛りチャット</h1>
     <p>文章を入力してください:</p>
     <form method="POST">
-        <input type="text" id="text" name="text">
+        <textarea id="text" name="text" rows="10" cols="94"></textarea>
         <input type="submit" value="送信">
     </form>
 
@@ -23,7 +32,7 @@ template = """
         <h2>受け取った文章</h2>
         <ul>
         {% for text in textlist %}
-            <li>{{ text }}</li>
+            <p class="m">{{ text }}</p>
         {% endfor %}
         </ul>
     {% endif %}
