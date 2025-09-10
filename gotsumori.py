@@ -22,11 +22,7 @@ template = """
 </head>
 <body>
     <h1>ごつ盛りチャット</h1>
-    <p>文章を入力してください:</p>
-    <form method="POST">
-        <textarea id="text" name="text" rows="10" cols="94"></textarea>
-        <input type="submit" value="送信">
-    </form>
+    
 
     {% if textlist %}
         <h2>受け取った文章</h2>
@@ -36,6 +32,11 @@ template = """
         {% endfor %}
         </ul>
     {% endif %}
+    <p>文章を入力してください:</p>
+    <form method="POST">
+        <textarea id="text" name="text" rows="10" cols="94"></textarea>
+        <input type="submit" value="送信">
+    </form>
 </body>
 </html>
 """
