@@ -42,6 +42,7 @@ template = """
     </form>
     <p>名前を入力し決定を押した後メッセージを送信してください。</p>
     <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
+    <div id="bottom"></div>
 </body>
 </html>
 """
@@ -66,7 +67,7 @@ def index():
         if text:
             namelist.append(name)
             textlist.append(text)
-        return redirect(url_for('index'))
+        return redirect(url_for('index') + "#bottom")
     
     messages = list(zip(namelist, textlist))
     return render_template_string(template, messages=messages)
