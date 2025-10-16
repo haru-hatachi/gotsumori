@@ -1,6 +1,5 @@
 from flask import Flask, request, render_template_string, redirect, url_for
 
-
 app = Flask(__name__)
 
 # HTMLテンプレート
@@ -14,44 +13,63 @@ template = """
     .m{
         border: 3px solid #00E5A8;
         width: 800px;
-         word-wrap: break-word;
-         width: 800px;
-         white-space: pre-line;
+        word-wrap: break-word;
+        white-space: pre-line;
     }
     </style>
 </head>
 <body>
     <h1>ごつ盛りチャット</h1>
-    
 
-    {% if textlist %}
+    {% if messages %}
         <h2>受け取った文章</h2>
         <ul>
-        {% for text in textlist %}
-            <p class="m">{{ text }}</p>
+        {% for name, text in messages %}
+            <p class="m"><strong>{{ name }}</strong>: {{ text }}</p>
         {% endfor %}
         </ul>
     {% endif %}
+
+    <p>名前を入力してください:</p>
+    <form method="POST">
+        <textarea id="name" name="name" rows="2" cols="19"></textarea>
+        <input type="submit" value="決定">
+    </form>
     <p>文章を入力してください:</p>
     <form method="POST">
         <textarea id="text" name="text" rows="10" cols="94"></textarea>
         <input type="submit" value="送信">
     </form>
+    <p>名前を入力し決定を押した後メッセージを送信してください。</p>
+    <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
 </body>
 </html>
 """
 
 textlist = []
+namelist = []
+namedic = {}
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        name = request.form.get("name")
         text = request.form.get("text")
+        if name:
+            namedic[ip] = name
+        else:
+            if ip in namedic:
+                name = namedic[ip]
+            else:
+                name = "名無し"
         if text:
+            namelist.append(name)
             textlist.append(text)
-        # POST後にリダイレクトしてGETに変換
         return redirect(url_for('index'))
-    return render_template_string(template, textlist=textlist)
+    
+    messages = list(zip(namelist, textlist))
+    return render_template_string(template, messages=messages)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",port=5000,debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
