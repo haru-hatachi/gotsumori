@@ -38,7 +38,7 @@ template = """
         <textarea id="text" name="text" rows="10" cols="94"></textarea>
         <input type="submit" value="送信">
     </form>
-    <p>名前を入力し決定を押した後メッセージを送信してください。</p>
+    <p>名前を入力した後メッセージを送信してください。</p>
     <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
 </body>
 </html>
