@@ -1,6 +1,7 @@
-from flask import Flask, request, render_template_string, redirect, url_for
+from flask import Flask, request, render_template_string, redirect, url_for, session
 
 app = Flask(__name__)
+app.secret_key = "秘密のキー"
 
 # HTMLテンプレート
 template = """
@@ -32,24 +33,20 @@ template = """
 
     <p>名前を入力してください:</p>
     <form method="POST">
-        <textarea id="name" name="name" rows="2" cols="19"></textarea>
-        <input type="submit" value="決定">
-    </form>
+        <textarea id="name" name="name" rows="2" cols="19">{{ session.get('name', '') }}</textarea>
     <p>文章を入力してください:</p>
-    <form method="POST">
         <textarea id="text" name="text" rows="10" cols="94"></textarea>
         <input type="submit" value="送信">
     </form>
     <p>名前を入力し決定を押した後メッセージを送信してください。</p>
     <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
-    <div id="bottom"></div>
 </body>
 </html>
 """
 
 textlist = []
 namelist = []
-namedic = {}
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -58,16 +55,13 @@ def index():
         name = request.form.get("name")
         text = request.form.get("text")
         if name:
-            namedic[ip] = name
+            session["name"] = name
         else:
-            if ip in namedic:
-                name = namedic[ip]
-            else:
-                name = "名無し"
+            session["name"] = "名無し"
         if text:
-            namelist.append(name)
+            namelist.append(session["name"])
             textlist.append(text)
-        return redirect(url_for('index') + "#bottom")
+        return redirect(url_for('index'))
     
     messages = list(zip(namelist, textlist))
     return render_template_string(template, messages=messages)
