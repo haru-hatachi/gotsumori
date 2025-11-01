@@ -1,6 +1,9 @@
 from flask import Flask, request, render_template_string, redirect, url_for, session
 import os
 import shutil
+from PIL import Image
+from io import BytesIO
+
 
 app = Flask(__name__)
 app.secret_key = "秘密のキー"
@@ -34,6 +37,8 @@ template = """
                 <p class="m"><strong>{{ name }}</strong>:
                     <img src="{{ url_for('static', filename=text[1:]) }}" width="200">
                 </p>
+            {% elif text[0] == "f" %}
+                <a href="{{ url_for('static', filename=text[1:]) }}" download>{{ text[1:] }} をダウンロード</a>
             {% endif %}
         {% endfor %}
         </ul>
@@ -47,7 +52,7 @@ template = """
         <input type="submit" value="送信">
     </form>
     <form method="post" enctype="multipart/form-data">
-        <input type="file" name="image">
+        <input type="file" name="file">
         <button type="submit">送信</button>
     </form>
     <p>名前を入力し決定を押した後メッセージを送信してください。</p>
@@ -70,7 +75,7 @@ def index():
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
         text = request.form.get("text")
-        image = request.files.get("image")
+        file = request.files.get("file")
         if name:
             session["name"] = name
         else:
@@ -78,15 +83,29 @@ def index():
         if text:
             namelist.append(session["name"])
             textlist.append("t"+text)
-        if image and image.filename != "":
+        if file and file.filename != "":
             if name:
                 session["name"] = name
             else:
                 session["name"] = "名無し"
-            filepath = os.path.join(UPLOAD_FOLDER, image.filename)
-            image.save(filepath)
+            data = file.read()
+            file.seek(0)
+
+            # Pillowを使って画像かどうか判定
+            try:
+                Image.open(BytesIO(data))
+                is_image = True
+            except:
+                is_image = False
+
+            if is_image:
+                textlist.append("i" + file.filename)
+            else:
+                textlist.append("f" + file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(filepath)
             namelist.append(session["name"])
-            textlist.append("i" + image.filename)
+            
         return redirect(url_for('index'))
     
     messages = list(zip(namelist, textlist))
