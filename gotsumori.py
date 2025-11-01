@@ -35,7 +35,7 @@ template = """
                 <p class="m"><strong>{{ name }}</strong>: {{ text[1:] }}</p>
             {% elif text[0] == "i" %}
                 <p class="m"><strong>{{ name }}</strong>:
-                    <img src="{{ url_for('static', filename=text[1:]) }}" width="200">
+                    <img src="{{ url_for('static', filename=text[1:]) }}" width="400">
                 </p>
             {% elif text[0] == "f" %}
                 <p class="m"><strong>{{ name }}</strong>:
@@ -47,13 +47,11 @@ template = """
     {% endif %}
 
     <p>名前を入力してください:</p>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <textarea id="name" name="name" rows="2" cols="19">{{ session.get('name', '') }}</textarea>
     <p>文章を入力してください:</p>
         <textarea id="text" name="text" rows="10" cols="94"></textarea>
-        <input type="submit" value="送信">
-    </form>
-    <form method="post" enctype="multipart/form-data">
+    <p>ファイルを選択してください
         <input type="file" name="file">
         <button type="submit">送信</button>
     </form>
