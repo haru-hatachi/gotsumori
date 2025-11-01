@@ -38,7 +38,9 @@ template = """
                     <img src="{{ url_for('static', filename=text[1:]) }}" width="200">
                 </p>
             {% elif text[0] == "f" %}
-                <a href="{{ url_for('static', filename=text[1:]) }}" download>{{ text[1:] }} をダウンロード</a>
+                <p class="m"><strong>{{ name }}</strong>:
+                    <a href="{{ url_for('static', filename=text[1:]) }}" download>{{ text[1:] }} をダウンロード</a>
+                </p>
             {% endif %}
         {% endfor %}
         </ul>
