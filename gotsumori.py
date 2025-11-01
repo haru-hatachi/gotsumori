@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template_string, redirect, url_for, session
-
+import os
 app = Flask(__name__)
 app.secret_key = "秘密のキー"
 
@@ -26,7 +26,13 @@ template = """
         <h2>受け取った文章</h2>
         <ul>
         {% for name, text in messages %}
-            <p class="m"><strong>{{ name }}</strong>: {{ text }}</p>
+            {% if text[0] == "t" %}
+                <p class="m"><strong>{{ name }}</strong>: {{ text[1:] }}</p>
+            {% elif text[0] == "i" %}
+                <p class="m"><strong>{{ name }}</strong>:
+                    <img src="{{ url_for('static', filename=text[1:]) }}" width="200">
+                </p>
+            {% endif %}
         {% endfor %}
         </ul>
     {% endif %}
@@ -38,14 +44,22 @@ template = """
         <textarea id="text" name="text" rows="10" cols="94"></textarea>
         <input type="submit" value="送信">
     </form>
-    <p>名前を入力した後メッセージを送信してください。</p>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="image">
+        <button type="submit">送信</button>
+    </form>
+    <p>名前を入力し決定を押した後メッセージを送信してください。</p>
     <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
+
+
 </body>
 </html>
 """
 
 textlist = []
 namelist = []
+UPLOAD_FOLDER = "static"  # 保存先フォルダ
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -54,13 +68,19 @@ def index():
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
         text = request.form.get("text")
+        image = request.files.get("image")
         if name:
             session["name"] = name
         else:
             session["name"] = "名無し"
         if text:
             namelist.append(session["name"])
-            textlist.append(text)
+            textlist.append("t"+text)
+        if image and image.filename != "":
+            filepath = os.path.join(UPLOAD_FOLDER, image.filename)
+            image.save(filepath)
+            namelist.append(session["name"])
+            textlist.append("i" + image.filename)
         return redirect(url_for('index'))
     
     messages = list(zip(namelist, textlist))
