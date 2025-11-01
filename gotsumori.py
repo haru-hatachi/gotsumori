@@ -1,5 +1,7 @@
 from flask import Flask, request, render_template_string, redirect, url_for, session
 import os
+import shutil
+
 app = Flask(__name__)
 app.secret_key = "秘密のキー"
 
@@ -77,6 +79,10 @@ def index():
             namelist.append(session["name"])
             textlist.append("t"+text)
         if image and image.filename != "":
+            if name:
+                session["name"] = name
+            else:
+                session["name"] = "名無し"
             filepath = os.path.join(UPLOAD_FOLDER, image.filename)
             image.save(filepath)
             namelist.append(session["name"])
@@ -85,6 +91,19 @@ def index():
     
     messages = list(zip(namelist, textlist))
     return render_template_string(template, messages=messages)
+
+@app.route('/clear')
+def clear():
+    global textlist, namelist
+    textlist = []
+    namelist = []
+    # フォルダを削除（中身も含めて全部）
+    if os.path.exists("static"):
+        shutil.rmtree("static")
+    # 再作成
+    os.makedirs("static", exist_ok=True)
+    return redirect(url_for('index'))
+
 
 if __name__ == "__main__":
     import os
