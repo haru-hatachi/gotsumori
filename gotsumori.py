@@ -31,19 +31,34 @@ template = """
         <h2>受け取った文章</h2>
         <ul>
         {% for name, text in messages %}
-            {% if text[0] == "t" %}
-                <p class="m"><strong>{{ name }}</strong>: {{ text[1:] }}</p>
-            {% elif text[0] == "i" %}
-                <p class="m"><strong>{{ name }}</strong>:
-                    <img src="{{ url_for('static', filename=text[1:]) }}" width="400">
-                </p>
-            {% elif text[0] == "f" %}
-                <p class="m"><strong>{{ name }}</strong>:
-                    <a href="{{ url_for('static', filename=text[1:]) }}" download>{{ text[1:] }} をダウンロード</a>
-                </p>
+            {% set parts = text.split('_date_') %}
+            {% if parts|length == 1 %}
+                {% if parts[0][0] == "t" %}
+                    <p class="m"><strong>{{ name }}</strong>: {{ parts[0][1:] }}</p>
+                {% elif parts[0][0] == "i" %}
+                    <p class="m"><strong>{{ name }}</strong>:
+                        <img src="{{ url_for('static', filename=parts[0][1:]) }}" width="400">
+                    </p>
+                {% elif parts[0][0] == "f" %}
+                    <p class="m"><strong>{{ name }}</strong>:
+                        <a href="{{ url_for('static', filename=parts[0][1:]) }}" download>{{ parts[0][1:] }} をダウンロード</a>
+                    </p>
+                {% endif %}
+            {% elif parts|length == 2 %}
+                {% set main = parts[0] %}
+                {% set attach = parts[1] %}
+                <div class="m">
+                    {% if main[0] == "t" %}
+                        <p><strong>{{ name }}</strong>: {{ main[1:] }}</p>
+                    {% endif %}
+                    {% if attach[0] == "i" %}
+                        <img src="{{ url_for('static', filename=attach[1:]) }}" width="400">
+                    {% elif attach[0] == "f" %}
+                        <a href="{{ url_for('static', filename=attach[1:]) }}" download>{{ attach[1:] }} をダウンロード</a>
+                    {% endif %}
+                </div>
             {% endif %}
         {% endfor %}
-        </ul>
     {% endif %}
 
     <p>名前を入力してください:</p>
@@ -99,9 +114,15 @@ def index():
                 is_image = False
 
             if is_image:
-                textlist.append("i" + file.filename)
+                if text:
+                    textlist[len(textlist)-1] =textlist[len(textlist)-1] + "_date_" + ("i" + file.filename)
+                else:
+                    textlist.append("i" + file.filename)
             else:
-                textlist.append("f" + file.filename)
+                if text:
+                    textlist[len(textlist)-1] =textlist[len(textlist)-1] + "_date_" + ("f" + file.filename)
+                else:
+                    textlist.append("f" + file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(filepath)
             namelist.append(session["name"])
