@@ -21,6 +21,7 @@ template = """
         width: 800px;
         word-wrap: break-word;
         white-space: pre-line;
+        white-space: normal;
     }
     </style>
 </head>
