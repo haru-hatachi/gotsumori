@@ -76,6 +76,18 @@ template = """
 
 
 </body>
+<script>
+let lastCount = 0;
+async function checkForUpdate() {
+    const res = await fetch("/check_update");
+    const data = await res.json();
+    if (data.count !== lastCount && lastCount !== 0) {
+        location.reload();
+    }
+    lastCount = data.count;
+}
+setInterval(checkForUpdate, 2000); // 2秒ごとに確認
+</script>
 </html>
 """
 
@@ -144,6 +156,11 @@ def clear():
     # 再作成
     os.makedirs("static", exist_ok=True)
     return redirect(url_for('index'))
+
+@app.route("/check_update")
+def check_update():
+    return {"count": len(textlist)}
+
 
 
 if __name__ == "__main__":
