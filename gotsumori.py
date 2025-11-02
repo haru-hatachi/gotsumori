@@ -77,28 +77,60 @@ template = """
 
 </body>
 <script>
-let lastCount = 0;
-async function checkForUpdate() {
-    const res = await fetch("/check_update");
-    const data = await res.json();
-    if (data.count !== lastCount && lastCount !== 0) {
+let oldCount = {{ messages|length }};  // ← ここを変更！
+const thread = "{{ thread_name }}";
+
+async function checkUpdate() {
+    const response = await fetch(`/check_update/${thread}`);
+    const data = await response.json();
+
+    if (data.count > oldCount) {
         location.reload();
     }
-    lastCount = data.count;
+    oldCount = data.count;
 }
-setInterval(checkForUpdate, 2000); // 2秒ごとに確認
+
+setInterval(checkUpdate, 3000);
+if (window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
+}
+
 </script>
 </html>
 """
+os.makedirs("threads", exist_ok=True)
 
-textlist = []
-namelist = []
+@app.route("/")
+def root_redirect():
+    return redirect(url_for("index", thread="main"))
+
+@app.route('/clear')
+def clear():
+    global textlist, namelist
+    textlist = []
+    namelist = []
+    # フォルダを削除（中身も含めて全部）
+    if os.path.exists("static"):
+        shutil.rmtree("static")
+    if os.path.exists("threads"):
+        shutil.rmtree("threads")
+
+    # 再作成
+    os.makedirs("static", exist_ok=True)
+    os.makedirs("threads", exist_ok=True)
+    return redirect(url_for("index", thread="main"))
+
 UPLOAD_FOLDER = "static"  # 保存先フォルダ
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+@app.route("/<thread>", methods=["GET", "POST"])
+def index(thread):
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+
+    if any('！' <= ch <= '～' or '\u3000' <= ch <= '\uff9f' for ch in thread):
+        if thread != "main":
+            return redirect(url_for("index", thread="main"))
+
     if request.method == "POST":
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
@@ -109,8 +141,17 @@ def index():
         else:
             session["name"] = "名無し"
         if text:
-            namelist.append(session["name"])
-            textlist.append("t"+text)
+            if os.path.exists(os.path.join("threads", thread + ".txt")):
+                with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
+                    f.write("\n"+"t"+text)
+                with open(os.path.join("threads", thread + "name" + ".txt"), "a", encoding="utf-8") as f:
+                    f.write("\n"+session["name"])
+            else:
+                with open(os.path.join("threads", thread + ".txt"), "w", encoding="utf-8") as f:
+                    f.write("t"+text)
+                with open(os.path.join("threads", thread + "name" + ".txt"), "w", encoding="utf-8") as f:
+                    f.write(session["name"])
+
         if file and file.filename != "":
             if name:
                 session["name"] = name
@@ -128,42 +169,75 @@ def index():
 
             if is_image:
                 if text:
-                    textlist[len(textlist)-1] =textlist[len(textlist)-1] + "_date_" + ("i" + file.filename)
+                    if os.path.exists(os.path.join("threads", thread + ".txt")):
+                        with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
+                            f.write("_date_"+"i"+file.filename)
+                    else:
+                        with open(os.path.join("threads", thread + ".txt"), "w", encoding="utf-8") as f:
+                            f.write("_date_"+"i"+file.filename)
                 else:
-                    textlist.append("i" + file.filename)
+                    if os.path.exists(os.path.join("threads", thread + ".txt")):
+                        with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
+                            f.write("\n"+"i"+file.filename)
+                    else:
+                        with open(os.path.join("threads", thread + ".txt"), "w", encoding="utf-8") as f:
+                            f.write("i"+file.filename)
             else:
                 if text:
-                    textlist[len(textlist)-1] =textlist[len(textlist)-1] + "_date_" + ("f" + file.filename)
+                    if os.path.exists(os.path.join("threads", thread + ".txt")):
+                        with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
+                            f.write("_date_"+"f"+file.filename)
+                    else:
+                        with open(os.path.join("threads", thread + ".txt"), "w", encoding="utf-8") as f:
+                            f.write("_date_"+"f"+file.filename)
                 else:
-                    textlist.append("f" + file.filename)
+                    if os.path.exists(os.path.join("threads", thread + ".txt")):
+                        with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
+                            f.write("\n"+"f"+file.filename)
+                    else:
+                        with open(os.path.join("threads", thread + ".txt"), "w", encoding="utf-8") as f:
+                            f.write("f"+file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(filepath)
-            namelist.append(session["name"])
+            if os.path.exists(os.path.join("threads", thread + "name.txt")):
+                with open(os.path.join("threads", thread + "name" + ".txt"), "a", encoding="utf-8") as f:
+                    f.write("\n"+session["name"])
+            else:
+                with open(os.path.join("threads", thread + "name" + ".txt"), "w", encoding="utf-8") as f:
+                    f.write(session["name"])
             
-        return redirect(url_for('index'))
-    
+            return redirect(url_for('index', thread=thread))
+        
+    if os.path.exists(os.path.join("threads", thread + ".txt")) and os.path.exists(os.path.join("threads", thread + "name.txt")):
+        with open(os.path.join("threads", thread + ".txt"), "r", encoding="utf-8") as ft, \
+            open(os.path.join("threads", thread + "name.txt"), "r", encoding="utf-8") as fn:
+
+            textlist = ft.read().splitlines()
+            namelist = fn.read().splitlines()
+    else:
+        textlist = []
+        namelist = []
+
     messages = list(zip(namelist, textlist))
-    return render_template_string(template, messages=messages)
+    return render_template_string(template, messages=messages, thread_name=thread)
 
-@app.route('/clear')
-def clear():
-    global textlist, namelist
-    textlist = []
-    namelist = []
-    # フォルダを削除（中身も含めて全部）
-    if os.path.exists("static"):
-        shutil.rmtree("static")
-    # 再作成
-    os.makedirs("static", exist_ok=True)
-    return redirect(url_for('index'))
 
-@app.route("/check_update")
-def check_update():
-    return {"count": len(textlist)}
+
+@app.route("/check_update/<thread>")
+def check_update(thread):
+    import os
+
+    filename = os.path.join("threads", thread + ".txt")
+    if not os.path.exists(filename):
+        return {"count": 0}
+
+    with open(filename, "r", encoding="utf-8") as f:
+        count = len(f.read().splitlines())
+    return {"count": count}
 
 
 
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))  # Renderが指定するポートを取得
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
