@@ -3,6 +3,7 @@ import os
 import shutil
 from PIL import Image
 from io import BytesIO
+import random
 
 
 app = Flask(__name__)
@@ -26,7 +27,7 @@ template = """
     </style>
 </head>
 <body>
-    <h1>ごつ盛りチャット</h1>
+    <h1>{{ threadname }}</h1>
 
     {% if messages %}
         <h2>受け取った文章</h2>
@@ -73,7 +74,14 @@ template = """
     </form>
     <p>名前を入力し決定を押した後メッセージを送信してください。</p>
     <p>名前を入力しなかった場合、名前は「名無し」になります。</p>
-    <p>URLの「gotsumori.com/main」の「main」の部分を任意の英数字にすることで、同じURLどうしでだけチャットが出来ます。</p>
+    <p>スレッドを名前を決めて作成できます。作成したスレッドには「スレッド一覧」から参加可能です。</p>
+    <button type="button" onclick="location.href='/threads'">スレッド一覧</button>
+    <form method="POST">
+        <p>スレッド名を入力し、ボタンを押してください。</p>
+        <textarea id="threadname" name="threadname" rows="2" cols="19"></textarea>
+        <button type="submit">スレッド作成</button>
+    </form>
+
 
 
 </body>
@@ -99,11 +107,60 @@ if (window.history.replaceState) {
 </script>
 </html>
 """
+
+threadstemplate = """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ごつ盛りチャット</title>
+    <style>
+    .m {
+        display: block;
+        border: 3px solid #00E5A8;
+        width: 800px;
+        margin: 8px 0;
+        padding: 6px;
+        word-wrap: break-word;
+        white-space: pre-line;
+        text-decoration: none;
+        color: black;
+    }
+    .m:hover {
+        background-color: #E0FFF5;
+    }
+    </style>
+</head>
+<body>
+    <h1>チャット一覧</h1>
+
+    {% if threads %}
+        <ul style="list-style: none; padding: 0;">
+        {% for ID, name in threads %}
+            <li><a class="m" href="{{ url_for('index', thread=ID) }}">{{ name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>スレッドがまだありません。</p>
+    {% endif %}
+</body>
+</html>
+"""
+
+
+
+
 os.makedirs("threads", exist_ok=True)
+
+if not os.path.exists("threadsname.txt"):
+    with open("threadsname.txt", "w", encoding="utf-8") as f:
+        f.write("main ごつ盛りチャット")
+
 
 @app.route("/")
 def root_redirect():
     return redirect(url_for("index", thread="main"))
+
 
 @app.route('/clear')
 def clear():
@@ -119,24 +176,42 @@ def clear():
     # 再作成
     os.makedirs("static", exist_ok=True)
     os.makedirs("threads", exist_ok=True)
+    with open("threadsname.txt", "w", encoding="utf-8") as f:
+        f.write("main ごつ盛りチャット")
+
     return redirect(url_for("index", thread="main"))
+
 
 UPLOAD_FOLDER = "static"  # 保存先フォルダ
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
+
 @app.route("/<thread>", methods=["GET", "POST"])
 def index(thread):
-
-
-    if any('！' <= ch <= '～' or '\u3000' <= ch <= '\uff9f' for ch in thread):
-        if thread != "main":
+    threadname = "ごつ盛りチャット"
+    if os.path.exists("threadsname.txt"):
+        with open("threadsname.txt", "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(" ", 1)
+                if len(parts) == 2:
+                    tid, tname = parts
+                    if tid == thread:
+                        threadname = tname
+                        break
+    try:
+        thread = int(thread)
+        thread = str(thread)
+    except ValueError:
+        if thread != "main" and thread != "clear" and thread != "threads" and thread != "makethread":
             return redirect(url_for("index", thread="main"))
-
+        
     if request.method == "POST":
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
         text = request.form.get("text")
         file = request.files.get("file")
+        threadname = request.form.get("threadname")
         if name:
             session["name"] = name
         else:
@@ -209,6 +284,14 @@ def index(thread):
             
             return redirect(url_for('index', thread=thread))
         
+        if threadname:
+            threadID=str(random.randint(0,9))
+            for i in range(7):
+                threadID=threadID+str(random.randint(0,9))
+            with open("threadsname.txt", "a", encoding="utf-8") as f:
+                f.write(f"\n{threadID} {threadname}")
+            return redirect(url_for('index', thread=threadID))
+        
     if os.path.exists(os.path.join("threads", thread + ".txt")) and os.path.exists(os.path.join("threads", thread + "name.txt")):
         with open(os.path.join("threads", thread + ".txt"), "r", encoding="utf-8") as ft, \
             open(os.path.join("threads", thread + "name.txt"), "r", encoding="utf-8") as fn:
@@ -219,8 +302,37 @@ def index(thread):
         textlist = []
         namelist = []
 
-    messages = list(zip(namelist, textlist))
-    return render_template_string(template, messages=messages, thread_name=thread)
+    threadID = thread
+
+    with open("threadsname.txt", "r", encoding="utf-8") as f:
+        text = f.read()
+
+    if threadID in text:
+        messages = list(zip(namelist, textlist))
+        return render_template_string(template, messages=messages, thread_name=thread, threadname=threadname)
+
+    else:
+        return redirect(url_for('index', thread="main"))
+
+
+
+
+@app.route("/threads")
+def show_threads():
+    threads = []
+
+    # threadsname.txt を開いて1行ずつ読む
+    if os.path.exists("threadsname.txt"):
+        with open("threadsname.txt", "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(" ", 1)  # 例: "12345678 雑談スレッド" → ["12345678", "雑談スレッド"]
+                if len(parts) == 2:
+                    thread_id, thread_name = parts
+                    threads.append((thread_id, thread_name))  # リストに追加
+
+    return render_template_string(threadstemplate, threads=threads)
+
+
 
 
 
@@ -235,6 +347,8 @@ def check_update(thread):
     with open(filename, "r", encoding="utf-8") as f:
         count = len(f.read().splitlines())
     return {"count": count}
+
+
 
 
 
