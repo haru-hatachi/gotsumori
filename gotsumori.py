@@ -205,6 +205,7 @@ def index(thread):
     except ValueError:
         if thread != "main" and thread != "clear" and thread != "threads" and thread != "makethread":
             return redirect(url_for("index", thread="main"))
+
         
     if request.method == "POST":
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
@@ -291,6 +292,8 @@ def index(thread):
             with open("threadsname.txt", "a", encoding="utf-8") as f:
                 f.write(f"\n{threadID} {threadname}")
             return redirect(url_for('index', thread=threadID))
+        else:
+            return redirect(url_for('index', thread=thread))
         
     if os.path.exists(os.path.join("threads", thread + ".txt")) and os.path.exists(os.path.join("threads", thread + "name.txt")):
         with open(os.path.join("threads", thread + ".txt"), "r", encoding="utf-8") as ft, \
