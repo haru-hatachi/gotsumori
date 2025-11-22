@@ -22,7 +22,6 @@ template = """
         width: 800px;
         word-wrap: break-word;
         white-space: pre-line;
-        white-space: normal;
     }
     </style>
 </head>
@@ -36,7 +35,7 @@ template = """
             {% set parts = text.split('_date_') %}
             {% if parts|length == 1 %}
                 {% if parts[0][0] == "t" %}
-                    <p class="m"><strong>{{ name }}</strong>: {{ parts[0][1:] }}</p>
+                    <p class="m"><strong>{{ name }}</strong>: {{ parts[0][1:] | safe }}</p>
                 {% elif parts[0][0] == "i" %}
                     <p class="m"><strong>{{ name }}</strong>:
                         <img src="{{ url_for('static', filename=parts[0][1:]) }}" width="400">
@@ -51,7 +50,7 @@ template = """
                 {% set attach = parts[1] %}
                 <div class="m">
                     {% if main[0] == "t" %}
-                        <p><strong>{{ name }}</strong>: {{ main[1:] }}</p>
+                        <p class="m"><strong>{{ name }}</strong>: {{ parts[0][1:] | safe }}</p>
                     {% endif %}
                     {% if attach[0] == "i" %}
                         <img src="{{ url_for('static', filename=attach[1:]) }}" width="400">
@@ -211,6 +210,7 @@ def index(thread):
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
         text = request.form.get("text")
+        text = text.replace("\r\n", "\n").replace("\n", "<br>")
         file = request.files.get("file")
         threadname = request.form.get("threadname")
         if name:
