@@ -210,7 +210,6 @@ def index(thread):
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         name = request.form.get("name")
         text = request.form.get("text")
-        text = text.replace("\r\n", "\n").replace("\n", "<br>")
         file = request.files.get("file")
         threadname = request.form.get("threadname")
         if name:
@@ -218,6 +217,7 @@ def index(thread):
         else:
             session["name"] = "名無し"
         if text:
+            text = text.replace("\r\n", "\n").replace("\n", "<br>")
             if os.path.exists(os.path.join("threads", thread + ".txt")):
                 with open(os.path.join("threads", thread + ".txt"), "a", encoding="utf-8") as f:
                     f.write("\n"+"t"+text)
